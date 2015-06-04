@@ -44,3 +44,7 @@ Session.vim
 
 # Other
 log.txt
+
+# XCode
+*.DS_STORE
+

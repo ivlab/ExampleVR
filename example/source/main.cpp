@@ -14,8 +14,6 @@
 int
 main(int argc, char** argv)
 {
-	MinVR::DataFileUtils::addFileSearchPath("$(G)/src/MinVR/MVRCore/vrsetup");
-	MinVR::DataFileUtils::addFileSearchPath("$(G)/src/MinVR/MVRCore/shaders");
 	MinVR::AbstractMVREngine *engine = new MinVR::MVREngineGLFW();
 	engine->init(argc, argv);
 	MinVR::AbstractMVRAppRef app(new ExampleVrApp());
