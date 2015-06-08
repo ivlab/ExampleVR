@@ -119,7 +119,9 @@ void ExampleVrApp::initVBO(int threadId)
     // glBufferDataARB with NULL pointer reserves only memory space.
     // Copy actual data with 2 calls of glBufferSubDataARB, one for vertex coords and one for normals.
     // target flag is GL_ARRAY_BUFFER_ARB, and usage flag is GL_STATIC_DRAW_ARB
+    _mutex.lock();
 	_vboId[threadId] = GLuint(0);
+    _mutex.unlock();
 	glGenBuffersARB(1, &_vboId[threadId]);
     glBindBufferARB(GL_ARRAY_BUFFER_ARB, _vboId[threadId]);
     glBufferDataARB(GL_ARRAY_BUFFER_ARB, sizeof(vertices)+sizeof(normals)+sizeof(colors), 0, GL_STATIC_DRAW_ARB);

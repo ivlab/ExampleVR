@@ -20,6 +20,8 @@
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <map>
+#include "MVRCore/Thread.h"
+
 
 class ExampleVrApp : public MinVR::AbstractMVRApp {
 public:
@@ -37,6 +39,8 @@ private:
 	void initLights();
 
 	std::map<int, GLuint> _vboId;
+    MinVR::Mutex _mutex;
+
 };
 
 #endif /* EXAMPLEVRAPP_H_ */
