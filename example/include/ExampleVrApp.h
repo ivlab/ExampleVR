@@ -8,6 +8,7 @@
 
 #ifndef EXAMPLEVRAPP_H_
 #define EXAMPLEVRAPP_H_
+#define GLM_FORCE_RADIANS
 
 #include "GL/glew.h"
 #include "MVRCore/AbstractMVRApp.H"
@@ -16,6 +17,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/ext.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include "MVRCore/Event.H"
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -37,9 +41,18 @@ private:
 	void initGL();
 	void initVBO(int threadId);
 	void initLights();
-
+    GLuint _vao;
+    GLuint _vbo;
+    GLuint _vao2;
+    GLuint _vbo2;
+    GLuint _indexVbo;
+    GLuint shaderProgram;
 	std::map<int, GLuint> _vboId;
     MinVR::Mutex _mutex;
+    glm::vec3 player_position;
+    glm::vec3 player_direction;
+    std::vector<glm::vec3> lightPositions, lightColors;
+    std::vector<glm::mat4> WVPs;
 
 };
 
