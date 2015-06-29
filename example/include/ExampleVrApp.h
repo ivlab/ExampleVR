@@ -36,23 +36,24 @@ public:
 	void initializeContextSpecificVars(int threadId, MinVR::WindowRef window);
 	void postInitialization();
 	void drawGraphics(int threadId, MinVR::AbstractCameraRef camera, MinVR::WindowRef window);
-
+    void initData();
 private:
 	void initGL();
 	void initVBO(int threadId);
 	void initLights();
     GLuint _vao;
     GLuint _vbo;
-    GLuint _vao2;
-    GLuint _vbo2;
+
     GLuint _indexVbo;
     GLuint shaderProgram;
 	std::map<int, GLuint> _vboId;
     MinVR::Mutex _mutex;
-    glm::vec3 player_position;
-    glm::vec3 player_direction;
-    std::vector<glm::vec3> lightPositions, lightColors;
-    std::vector<glm::mat4> WVPs;
+    
+    std::vector<glm::vec3> verticies;
+    std::vector<glm::vec3> normals;
+    std::vector<glm::vec3> colors;
+    std::vector<GLuint> indicies;
+
 
 };
 

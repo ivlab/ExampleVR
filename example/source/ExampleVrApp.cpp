@@ -12,7 +12,7 @@
 typedef enum  {
     ATTRIB_POSITION = 0,
     ATTRIB_NORMAL = 1,
-    ATTRIB_TEX_COORD = 2,
+    ATTRIB_COLOR = 2,
     ATTRIB_WVP = 4
 } ;
 using namespace MinVR;
@@ -27,162 +27,6 @@ struct Vertex {
     vec3 tangent;
     vec3 bitangent;
 };
-
-size_t loadOBJ(
-               const char * path,
-               std::vector < Vertex > & out_vertices
-               );
-
-struct GeometrySet {
-    struct Geometry {
-        size_t start;
-        size_t size;
-        std::string name;
-    };
-    std::vector< Vertex > vertices;
-    std::vector<Geometry> models;
-    size_t addGeometry(const char * name) {
-        Geometry g;
-        g.start =vertices.size();
-        
-        size_t size = loadOBJ(name, vertices);
-        
-        g.size = size;
-        g.name = name;
-        
-        
-        models.push_back(g);
-        return models.size()-1;
-    }
-    
-    
-};
-GeometrySet geometry;
-std::vector<GLint> textures;
-
-size_t loadOBJ(
-               const char * path,
-               std::vector < Vertex > & out_vertices
-               ) {
-    std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
-    std::vector< glm::vec3 > temp_vertices;
-    std::vector< glm::vec2 > temp_uvs;
-    std::vector< glm::vec3 > temp_normals;
-    std::vector< glm::vec3 > temp_tangents;
-    std::vector< glm::vec3 > temp_bitangents;
-    
-    
-    FILE * file = fopen(path, "r");
-    if( file == NULL ){
-        printf("Impossible to open the file !\n");
-        return false;
-    }
-    
-    while( 1 ){
-        
-        char lineHeader[128];
-        // read the first word of the line
-        int res = fscanf(file, "%s", lineHeader);
-        if (res == EOF)
-            break; // EOF = End Of File. Quit the loop.
-        
-        // else : parse lineHeader
-        
-        if ( strcmp( lineHeader, "v" ) == 0 ){
-            glm::vec3 vertex;
-            fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z );
-            temp_vertices.push_back(vertex);
-            
-        }else if ( strcmp( lineHeader, "vt" ) == 0 ){
-            glm::vec2 uv;
-            fscanf(file, "%f %f\n", &uv.x, &uv.y );
-            temp_uvs.push_back(uv);
-            
-        }else if ( strcmp( lineHeader, "vn" ) == 0 ){
-            glm::vec3 normal;
-            fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z );
-            temp_normals.push_back(normal);
-            
-        }else if ( strcmp( lineHeader, "f" ) == 0 ){
-            std::string vertex1, vertex2, vertex3;
-            unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
-            int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
-            if (matches != 9){
-                printf("File can't be read by our simple parser : ( Try exporting with other options\n");
-                return false;
-            }
-            vertexIndices.push_back(vertexIndex[0]);
-            vertexIndices.push_back(vertexIndex[1]);
-            vertexIndices.push_back(vertexIndex[2]);
-            uvIndices    .push_back(uvIndex[0]);
-            uvIndices    .push_back(uvIndex[1]);
-            uvIndices    .push_back(uvIndex[2]);
-            normalIndices.push_back(normalIndex[0]);
-            normalIndices.push_back(normalIndex[1]);
-            normalIndices.push_back(normalIndex[2]);
-            
-            
-            
-        }
-    }
-    // For each vertex of each triangle
-    for( unsigned int i=0; i<vertexIndices.size(); i++ ){
-        
-        unsigned int vertexIndex = vertexIndices[i];
-        unsigned int uvIndex = uvIndices[i];
-        unsigned int normalIndex = normalIndices[i];
-        Vertex v;
-        
-        v.position = temp_vertices[ vertexIndex-1 ];
-        v.normal = temp_normals[ normalIndex-1 ];
-        v.tex_coord = temp_uvs[uvIndex-1];
-        
-        out_vertices.push_back(v);
-        
-        
-    }
-    
-    for ( int i=0; i<out_vertices.size(); i+=3){
-        
-        // Shortcuts for vertices
-        glm::vec3 & v0 = out_vertices[i+0].position;
-        glm::vec3 & v1 = out_vertices[i+1].position;
-        glm::vec3 & v2 = out_vertices[i+2].position;
-        
-        // Shortcuts for UVs
-        glm::vec2 & uv0 = out_vertices[i+0].tex_coord;
-        glm::vec2 & uv1 = out_vertices[i+1].tex_coord;
-        glm::vec2 & uv2 = out_vertices[i+2].tex_coord;
-        
-        // Edges of the triangle : postion delta
-        glm::vec3 deltaPos1 = v1-v0;
-        glm::vec3 deltaPos2 = v2-v0;
-        
-        // UV delta
-        glm::vec2 deltaUV1 = uv1-uv0;
-        glm::vec2 deltaUV2 = uv2-uv0;
-        
-        float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-        glm::vec3 tangent = (deltaPos1 * deltaUV2.y   - deltaPos2 * deltaUV1.y)*r;
-        glm::vec3 bitangent = (deltaPos2 * deltaUV1.x   - deltaPos1 * deltaUV2.x)*r;
-        
-        
-        out_vertices[i+0].tangent=
-        out_vertices[i+1].tangent=
-        out_vertices[i+2].tangent=tangent;
-        
-        out_vertices[i+0].bitangent=
-        out_vertices[i+1].bitangent=
-        out_vertices[i+2].bitangent=bitangent;
-        
-    }
-    
-    
-    
-    
-    return vertexIndices.size();
-}
-
 
 // Create a NULL-terminated string by reading the provided file
 static char* readShaderSource(const char* shaderFile)
@@ -444,12 +288,7 @@ void ExampleVrApp::doUserInputAndPreDrawComputation(
         lastFrameCount = frameCount;
     }
     frameCount++;
-    lightPositions.at(0) = glm::vec3(2*sin(synchronizedTime), 2, cos(synchronizedTime));
-
-    lightPositions.at(1) = glm::vec3(2*sin(synchronizedTime+2*M_PI/3), 2, 2*cos(synchronizedTime+2*M_PI/3));
-    
-    lightPositions.at(2) = glm::vec3(2*sin(synchronizedTime+2*2*M_PI/3), 2, 2*cos(synchronizedTime+2*2*M_PI/3));
-    player_position = vec3(4*(sin(synchronizedTime)), 0.5, 4*(cos(synchronizedTime)));
+   
 	//for(int i=0; i < events.size(); i++) {
 	//	std::cout << events[i]->getName() <<std::endl;
 	//}
@@ -459,17 +298,7 @@ void ExampleVrApp::initializeContextSpecificVars(int threadId,
 		MinVR::WindowRef window) {
 	initGL();
 	//initVBO(threadId);
-	//initLights();
-    lightColors.push_back((vec3(0.8,0.7,0.9)));
-    lightPositions.push_back(vec3(0,100,0));
-    lightColors.push_back((vec3(0.7,0.7,0.5)));
-    lightPositions.push_back(vec3(0,100,0));
-    lightColors.push_back((vec3(1,1,1)));
-    lightPositions.push_back(vec3(0,100,0));
-	//glClearColor(0.f, 0.f, 0.f, 0.f);
-    player_position = vec3(4, 0.5, 2);
-//    player_direction = vec3(-1,-1,-1);
-    
+
 	GLenum err;
 	if((err = glGetError()) != GL_NO_ERROR) {
 		std::cout << "openGL ERROR in initializeContextSpecificVars: "<<err<<std::endl;
@@ -487,9 +316,9 @@ void ExampleVrApp::initGL()
     glewInit();
     
     glGenBuffers(1, &_vbo);
+    glGenBuffers(1, &_indexVbo);
+
     glGenVertexArrays(1, &_vao);
-    glGenBuffers(1, &_vbo2);
-    glGenVertexArrays(1, &_vao2);
     shaderProgram = InitShader("Vertex.glsl", "Fragment.glsl");
     GLuint vertexBuffer;
     glGenBuffers(1, &vertexBuffer);
@@ -498,71 +327,148 @@ void ExampleVrApp::initGL()
 
     glBindVertexArray(_vao);
     int vertexCount = 0;
-    geometry.addGeometry("cube.obj");
-    std::cout << "Vertex size: " << sizeof(Vertex) << "\n" << "list size: " << geometry.vertices.size() << " * " << sizeof(Vertex) << " = " << geometry.vertices.size() * sizeof(Vertex)<< "\n";
-    std::cout << "floats in Vertex:" << sizeof(Vertex)/sizeof(float) << "\n";
+    // cube /////////////////////////////////////////////////////
+    //////////////////
+    //    v6----- v5
+    //   /|      /|
+    //  v1------v0|
+    //  | |     | |
+    //  | |v7---|-|v4
+    //  |/      |/
+    //  v2------v3
+    
+    glm::vec3 v[] = {
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(-1.0f, 1.0f, 1.0f),
+        glm::vec3(-1.0f,-1.0f, 1.0f),
+        glm::vec3(1.0f,-1.0f, 1.0f),
+        glm::vec3(1.0f,-1.0f,-1.0f),
+        glm::vec3(1.0f, 1.0f,-1.0f),
+        glm::vec3(-1.0f, 1.0f,-1.0f),
+        glm::vec3(-1.0f,-1.0f,-1.0f)
+    };
+    glm::vec3 n[] = {
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,0)
+    };
+    glm::vec3 c[] = {
+        glm::vec3(0,0,0),
+        glm::vec3(0,0,1),
+        glm::vec3(0,1,0),
+        glm::vec3(0,1,1),
+        glm::vec3(1,0,0),
+        glm::vec3(1,0,1),
+        glm::vec3(1,1,0),
+        glm::vec3(1,1,1)
+    };
 
+    glm::vec3 vertices[]  = {
+        v[0], v[1], v[2], v[3],
+        v[0], v[3], v[4], v[5],
+        v[0], v[5], v[6], v[1],
+        v[1], v[6], v[7], v[2],
+        v[7], v[4], v[3], v[2],
+        v[4], v[7], v[6], v[5]
+    };
+    
+    glm::vec3 normals[] = {
+        n[0], n[0], n[0], n[0],
+        n[1], n[1], n[1], n[1],
+        n[2], n[2], n[2], n[2],
+        n[3], n[3], n[3], n[3],
+        n[4], n[4], n[4], n[4],
+        n[5], n[5], n[5], n[5]
+    };
+    
+    glm::vec3 colors[] = {
+#if 1
+        c[0], c[1], c[2], c[3],
+        c[0], c[3], c[4], c[5],
+        c[0], c[5], c[6], c[1],
+        c[1], c[6], c[7], c[2],
+        c[7], c[4], c[3], c[2],
+        c[4], c[7], c[6], c[5]
+#else
+        c[0], c[0], c[0], c[0],
+        c[1], c[1], c[1], c[1],
+        c[2], c[2], c[2], c[2],
+        c[3], c[3], c[3], c[3],
+        c[4], c[4], c[4], c[4],
+        c[5], c[5], c[5], c[5]
+#endif
+    };
+    
+    GLuint indices_array[] = {
+        0, 1, 2, // front *
+        2, 3, 0, // *
+        4, 5, 6, // right X
+        6, 7, 4, // X
+        8, 9, 10, // top ?
+        10, 11, 8,
+        12, 13, 14, // left
+        14, 15, 12,
+        16, 17, 18, // bottom
+        18, 19, 16,
+        20, 21, 22, // back
+        22, 23, 20
+    };
+    indicies.assign(indices_array, indices_array+36);
+    
+    
+    
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    glBufferData(GL_ARRAY_BUFFER, geometry.vertices.size() * sizeof(Vertex), &geometry.vertices[0], GL_STATIC_DRAW);
-    //Tell GPU how to intrepret VBO data
-    std::cout << sizeof(Vertex) <<  '-' <<  sizeof(vec3) << " = " << sizeof(Vertex) - sizeof(vec3) << std::endl;
-    glVertexAttribPointer(ATTRIB_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-    glEnableVertexAttribArray(ATTRIB_POSITION);
-    
-    glVertexAttribPointer(ATTRIB_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)sizeof(vec3));
-    glEnableVertexAttribArray(ATTRIB_NORMAL);
-    
-    glVertexAttribPointer(ATTRIB_TEX_COORD, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(sizeof(vec3)*2));
-    glEnableVertexAttribArray(ATTRIB_TEX_COORD);
 
-    textures.push_back(LoadTexture("cube.bmp", 1024, 1024)) ;
     
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo2);
-    
-    for (unsigned int i = 0; i < 4 ; i++) {
-        glEnableVertexAttribArray(ATTRIB_WVP + i);
-        glVertexAttribPointer(ATTRIB_WVP + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                              (const GLvoid*)(sizeof(GLfloat) * i * 4));
-        glVertexAttribDivisor(ATTRIB_WVP + i, 1);
-    }
-    
-   
-    glm::mat4 model;
-    for(int i = 0; i < 100000; i++)
-    {
-        model = glm::mat4(1);
+//        glBufferData(GL_ARRAY_BUFFER, geometry.vertices.size() * sizeof(Vertex), &geometry.vertices[0], GL_STATIC_DRAW);
         
-        model = glm::translate(model, glm::vec3(-i/10.f,i/20.f,-i/10.f));
-        model = glm::rotate(model, (float)(i*M_PI/64),glm::vec3(1,0,0));
-        WVPs.push_back(model);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices)+sizeof(normals)+sizeof(colors), NULL, GL_STATIC_DRAW);
 
-    }
-    
-    glBindBuffer(GL_ARRAY_BUFFER, ATTRIB_WVP);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * WVPs.size(), WVPs.data(), GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(ATTRIB_WVP);
-    model = glm::mat4(1);
+        glBufferSubData(GL_ARRAY_BUFFER,0                               ,sizeof(vertices),  &vertices[0]);
+        glBufferSubData(GL_ARRAY_BUFFER,sizeof(vertices)                ,sizeof(normals),   &normals[0]);
+        glBufferSubData(GL_ARRAY_BUFFER,sizeof(vertices)+sizeof(normals),sizeof(colors),    &colors[0]);
+        
+        //Tell GPU how to intrepret VBO data
 
-    model = glm::scale(model, glm::vec3(0.5,0.5,0.5));
+        glVertexAttribPointer(ATTRIB_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3, 0);
+        glEnableVertexAttribArray(ATTRIB_POSITION);
+        
+        glVertexAttribPointer(ATTRIB_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3, (void*)sizeof(vertices));
+        glEnableVertexAttribArray(ATTRIB_NORMAL);
+        
+        glVertexAttribPointer(ATTRIB_COLOR, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*3, (void*)(sizeof(vertices)+sizeof(normals)));
+        glEnableVertexAttribArray(ATTRIB_COLOR);
+
+
+    glBindBuffer(GL_ARRAY_BUFFER, _indexVbo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices_array), indices_array, GL_STATIC_DRAW);
     
     
+        
+            
+    glm::mat4 view = glm::lookAt(
+                                 vec3(3,3,3),  //Cam Position
+                                 vec3(0,0,0) ,  //Look at point
+                                 glm::vec3(0.0f, 1.0f, 0.0f)); //Up
+    glm::mat4 model(1);
+    
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
     
     
     glm::mat4 proj = glm::perspective((float)M_PI/3, 1.0f, 0.01f, 1000.0f); //FOV, aspect, near, far
     GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
-    
-    GLint uniLightPositions = glGetUniformLocation(shaderProgram, "lightPositions");
-    GLint uniLightColors = glGetUniformLocation(shaderProgram, "lightColors");
-    GLint uniLightCount = glGetUniformLocation(shaderProgram, "lightCount");
-    glUniform1i(uniLightCount, lightPositions.size());
 
 	GLenum err;
 	if((err = glGetError()) != GL_NO_ERROR) {
 		std::cout << "GLERROR initGL: "<<err<<std::endl;
 	}
-    glUniform3fv(uniLightColors, lightPositions.size(), (float*)&lightColors[0]);
-    glUniform3fv(uniLightPositions, lightPositions.size(), (float*)&lightPositions[0]);
+
+    
 
 }
 
@@ -573,43 +479,22 @@ void ExampleVrApp::drawGraphics(int threadId, MinVR::AbstractCameraRef camera,
 		MinVR::WindowRef window) {
     glClearColor(0.2, 0.2, 0.3, 1.0);
     glEnable(GL_DEPTH_TEST);
-    glCullFace(GL_BACK);
+//    glCullFace(GL_BACK);
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLint uniCam = glGetUniformLocation(shaderProgram, "camPosition");
-    //    cout << player_position.x << player_position.z << endl;
-    glUniform3f(uniCam,  player_position.x, player_position.y, player_position.z);
+
     
     
-    GLint uniView = glGetUniformLocation(shaderProgram, "view");
-
-    glm::mat4 view = glm::lookAt(
-                                 player_position,  //Cam Position
-                                 vec3(0,0,0) ,  //Look at point
-                                 glm::vec3(0.0f, 1.0f, 0.0f)); //Up
-
-    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-    glm::mat4 model;
-    GLint uniModel = glGetUniformLocation(shaderProgram, "model");
-    glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 
-    //    lightColors.push_back(vec3(4,4,2));
-    //    lightPositions.push_back(vec3(-3,5,0));
-    
 
-    if (false) {
-        for(int i = 0; i < WVPs.size(); i++)
-        {
-            glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(WVPs.at(i)));
-            glDrawArrays(GL_TRIANGLES, geometry.models[0].start,geometry.models[0].size);
-        }
-    } else {
-        glDrawArraysInstanced(GL_TRIANGLES,geometry.models[0].start,geometry.models[0].size, WVPs.size());
 
-    }
-
+//    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _indexVbo);
+//    glBindBuffer(GL_VERTEX_ARRAY, _vbo);
+//    glDrawArrays(GL_LINE_STRIP, 0, 36);
+    glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, indicies.data());
    
 
     
