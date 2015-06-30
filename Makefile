@@ -41,7 +41,7 @@ gen:
 	cd ./build/Debug; cmake -DCMAKE_BUILD_TYPE=Debug ../../
 	cd ../$(DIRNAME)_eclipse; cmake -DCMAKE_BUILD_TYPE=Debug $(CURDIR) -G "Eclipse CDT4 - Unix Makefiles" -DCMAKE_ECLIPSE_VERSION=4.3
     else ifeq ($(ARCH), WIN32)
-	cd ./build; cmake ../ -G "Visual Studio 10 Win64"
+	cd ./build; cmake ../ -G "Visual Studio 12 Win64"
     else ifeq ($(ARCH), OSX)
 	cd ./build; cmake ../ -G Xcode
     endif

@@ -10,7 +10,10 @@
 #define EXAMPLEVRAPP_H_
 #define GLM_FORCE_RADIANS
 
+#define _USE_MATH_DEFINES 
+
 #include "GL/glew.h"
+#include <cmath>
 #include "MVRCore/AbstractMVRApp.H"
 #include "MVRCore/AbstractCamera.H"
 #include "MVRCore/AbstractWindow.H"

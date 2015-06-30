@@ -179,7 +179,7 @@ void ExampleVrApp::doUserInputAndPreDrawComputation(
     _model = glm::rotate(_model, (float)(M_PI_2*synchronizedTime), vec3(1,0,0));
     _model = glm::rotate(_model, (float)M_PI/4, vec3(0,1,0));
     
-    lightPositions.at(2) = vec3(0.2*cos(synchronizedTime*20),-.1,0.2*sin(synchronizedTime*20));
+    //lightPositions.at(2) = vec3(0.2*cos(synchronizedTime*20),-.1,0.2*sin(synchronizedTime*20));
 }
 
 void ExampleVrApp::initializeContextSpecificVars(int threadId,
@@ -215,19 +215,14 @@ void ExampleVrApp::initGL()
 }
 void ExampleVrApp::initVBO(int threadId)
 {
-
-    
-    glBindBuffer(GL_ARRAY_BUFFER,  _vboId[threadId]);
     glGenVertexArrays(1, &_vaoId[threadId]);
+	glBindVertexArray(_vaoId[threadId]);
+
     glGenBuffers(1, & _vboId[threadId]);
     glGenBuffers(1, &_iboId[threadId]);
 
-    glBindVertexArray(_vaoId[threadId]);
     glBindBuffer(GL_ARRAY_BUFFER,  _vboId[threadId]);
 
-
-    
-    glBindVertexArray(_vaoId[threadId]);
     
     glBufferData(GL_ARRAY_BUFFER,
                  vertices.size()*sizeof(vertices[0]) +
@@ -262,11 +257,11 @@ void ExampleVrApp::initVBO(int threadId)
     glEnableVertexAttribArray(glGetAttribLocation(_shdId[threadId], "color"));
     
     
-    glBindBuffer(GL_ARRAY_BUFFER, _iboId[threadId]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iboId[threadId]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.size()*sizeof(indicies[0]), indicies.data(), GL_STATIC_DRAW);
     
     
-    glClearColor(0.2, 0.2, 0.3, 1.0);
+	glClearColor(0.2, 0.2, 0.3, 1.0);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     
@@ -309,12 +304,12 @@ void ExampleVrApp::initData()
     glm::vec3 c[] = {
         glm::vec3(0.5,0.5,0.5),
         glm::vec3(0.5,0.5,1),
-        glm::vec3(0.5,1,0.5),
-        glm::vec3(0.5,1,1),
-        glm::vec3(1,0.5,0.5),
+        glm::vec3(0.5,0.6,0.5),
+		glm::vec3(0.5, 0.75, 1),
+		glm::vec3(1, 0.6, 0.5),
         glm::vec3(1,0.5,1),
-        glm::vec3(1,1,0.5),
-        glm::vec3(1,1,1)
+		glm::vec3(1, 0.6, 0.5),
+		glm::vec3(1, 0.6, 1)
     };
     
     glm::vec3 vertices_array[]  = {
@@ -418,7 +413,10 @@ void ExampleVrApp::drawGraphics(int threadId, MinVR::AbstractCameraRef camera,
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iboId[threadId]);
+	glBindVertexArray(_vaoId[threadId]);
+	//glDrawArrays(GL_TRIANGLES, 0, indicies.size());
 
-    glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, indicies.data());
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iboId[threadId]);
+
+    glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, nullptr);
 }
