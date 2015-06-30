@@ -14,6 +14,8 @@
 #include "MVRCore/AbstractMVRApp.H"
 #include "MVRCore/AbstractCamera.H"
 #include "MVRCore/AbstractWindow.H"
+#include "MVRCore/CameraOffAxis.H"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -36,23 +38,32 @@ public:
 	void initializeContextSpecificVars(int threadId, MinVR::WindowRef window);
 	void postInitialization();
 	void drawGraphics(int threadId, MinVR::AbstractCameraRef camera, MinVR::WindowRef window);
-    void initData();
+    
 private:
+    void initData();
+
 	void initGL();
 	void initVBO(int threadId);
-	void initLights();
-    GLuint _vao;
-    GLuint _vbo;
+    void initShader(int threadId);
 
-    GLuint _indexVbo;
-    GLuint shaderProgram;
+
 	std::map<int, GLuint> _vboId;
+    std::map<int, GLuint> _iboId;
+    std::map<int, GLuint> _vaoId;
+    std::map<int, GLuint> _shdId;
+
     MinVR::Mutex _mutex;
     
-    std::vector<glm::vec3> verticies;
+    std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec3> colors;
+    std::vector<glm::vec3> lightPositions;
+    std::vector<glm::vec3> lightColors;
+
     std::vector<GLuint> indicies;
+    
+    glm::mat4 _model;
+    GLuint _program;
 
 
 };
