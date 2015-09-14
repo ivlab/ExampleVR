@@ -40,7 +40,7 @@ public:
 	void doUserInputAndPreDrawComputation(const std::vector<MinVR::EventRef> &events, double synchronizedTime);
 	void initializeContextSpecificVars(int threadId, MinVR::WindowRef window);
 	void postInitialization();
-	void drawGraphics(int threadId, MinVR::AbstractCameraRef camera, MinVR::WindowRef window);
+    void drawGraphics(int threadId, MinVR::WindowRef window, int viewportIndex);
     
 private:
     void initData();
@@ -57,16 +57,15 @@ private:
 
     MinVR::Mutex _mutex;
     
-    std::vector<glm::vec3> vertices;
-    std::vector<glm::vec3> normals;
-    std::vector<glm::vec3> colors;
-    std::vector<glm::vec3> lightPositions;
-    std::vector<glm::vec3> lightColors;
+    std::vector<glm::vec3> _vertices;
+    std::vector<glm::vec3> _normals;
+    std::vector<glm::vec3> _colors;
+    std::vector<glm::vec3> _lightPositions;
+    std::vector<glm::vec3> _lightColors;
 
-    std::vector<GLuint> indicies;
+    std::vector<GLuint> _indices;
     
     glm::mat4 _model;
-    GLuint _program;
 
 
 };

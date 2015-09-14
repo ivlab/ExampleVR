@@ -9,26 +9,33 @@
 #include <example/include/ExampleVrApp.h>
 #define DEBUG_ON 1
 
-typedef enum  {
-    ATTRIB_POSITION = 0,
-    ATTRIB_NORMAL = 1,
-    ATTRIB_COLOR = 2,
-    ATTRIB_WVP = 4
-} ;
 using namespace MinVR;
 using glm::vec3;
-
 using glm::vec2;
 
-struct Vertex {
-    vec3 position;
-    vec3 normal;
-    vec2 tex_coord;
-    vec3 tangent;
-    vec3 bitangent;
-};
 
-// Create a GLSL program object from vertex and fragment shader files
+ExampleVrApp::ExampleVrApp() : MinVR::AbstractMVRApp() {
+    initData();
+}
+
+ExampleVrApp::~ExampleVrApp() {
+    for(std::map<int, GLuint>::iterator iterator = _vboId.begin(); iterator != _vboId.end(); iterator++) {
+        glDeleteBuffers(1, &iterator->second);
+    }
+    for(std::map<int, GLuint>::iterator iterator = _iboId.begin(); iterator != _iboId.end(); iterator++) {
+        glDeleteBuffers(1, &iterator->second);
+    }
+    for(std::map<int, GLuint>::iterator iterator = _vaoId.begin(); iterator != _vaoId.end(); iterator++) {
+        glDeleteVertexArrays(1, &iterator->second);
+    }
+    for(std::map<int, GLuint>::iterator iterator = _shdId.begin(); iterator != _shdId.end(); iterator++) {
+        glDeleteProgram( iterator->second);
+    }
+}
+
+
+
+// Create a GLSL program object from inline vertex and fragment text
 void ExampleVrApp::initShader(int threadId)
 {
     GLuint vertex_shader, fragment_shader;
@@ -39,8 +46,8 @@ void ExampleVrApp::initShader(int threadId)
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     printf("%i, %i\n",vertex_shader, fragment_shader);
     
-    // Read source code from shader files
-    vs_text =
+    // Specify source code with strings (these could be read from files)
+    vs_text = (GLchar *)
     "#version 330\n"
     "in vec3 position, color, normal;\n"
     "uniform mat4 model, view, proj;\n"
@@ -52,7 +59,7 @@ void ExampleVrApp::initShader(int threadId)
     "  fragNormal = normalize((transpose(inverse(model)) * vec4(normal,1.0)).xyz);\n"
     "}\n";
     
-    fs_text =
+    fs_text = (GLchar *)
     "#version 330\n"
     "in vec3 fragColor, fragPosition, fragNormal;\n"
     "out vec4 outColor;\n"
@@ -70,16 +77,8 @@ void ExampleVrApp::initShader(int threadId)
         "    Idiff = vec4(1,1,1,1)*max(dot(fragNormal,L),0)*1/pow(length(D),1);\n"
         "    lightAmount += lightColors[i]*Idiff.xyz;\n"
         "  }\n"
-    "  outColor = vec4((lightAmount+ vec3(0.2,0.2,0.2))*fragColor,1);\n"
+    "  outColor = vec4((lightAmount+ vec3(0.2,0.2,0.2))*(fragColor+vec3(0.2,0.2,0.2)),1);\n"
     "}\n";
-    
-//    fs_text =
-//    "#version 330\n"
-//    "in vec3 fragColor;\n"
-//    "out vec4 outColor;\n"
-//    "void main () {\n"
-//    "  outColor = vec4(fragColor,1);\n"
-//    "}\n";
     
     
     // error check
@@ -147,19 +146,11 @@ void ExampleVrApp::initShader(int threadId)
 }
 
 
-ExampleVrApp::ExampleVrApp() : MinVR::AbstractMVRApp() {
-        initData();
-}
-
-ExampleVrApp::~ExampleVrApp() {
-	for(std::map<int, GLuint>::iterator iterator = _vboId.begin(); iterator != _vboId.end(); iterator++) {
-		glDeleteBuffersARB(1, &iterator->second);
-	}
-}
 
 void ExampleVrApp::doUserInputAndPreDrawComputation(
 		const std::vector<MinVR::EventRef>& events, double synchronizedTime) {
     
+    // Calculate Frames Per Second every 3 seconds
     static int frameCount = 0;
     static int lastFrameCount = frameCount;
     static double lastTime = synchronizedTime;
@@ -172,14 +163,17 @@ void ExampleVrApp::doUserInputAndPreDrawComputation(
     }
     frameCount++;
    
+    // Spin the cube over time by setting the _model matrix
     _model = glm::mat4(1);
     _model = glm::scale(_model, vec3(0.1,0.1,0.1));
     _model = glm::rotate(_model, (float)(M_PI_2*synchronizedTime*1.5), vec3(0,1,0));
-
     _model = glm::rotate(_model, (float)(M_PI_2*synchronizedTime), vec3(1,0,0));
     _model = glm::rotate(_model, (float)M_PI/4, vec3(0,1,0));
     
-    //lightPositions.at(2) = vec3(0.2*cos(synchronizedTime*20),-.1,0.2*sin(synchronizedTime*20));
+    // Rotate the third light around the y axis, orbiting the cube
+    GLfloat light_a = synchronizedTime*10;
+    GLfloat light_d = 0.15;
+    _lightPositions.at(2) = vec3(light_d*cos(light_a),0.1,light_d*sin(light_a));
 }
 
 void ExampleVrApp::initializeContextSpecificVars(int threadId,
@@ -225,40 +219,40 @@ void ExampleVrApp::initVBO(int threadId)
 
     
     glBufferData(GL_ARRAY_BUFFER,
-                 vertices.size()*sizeof(vertices[0]) +
-                 normals.size()*sizeof(normals[0])+
-                 colors.size()*sizeof(colors[0]),
+                 _vertices.size()*sizeof(_vertices[0]) +
+                 _normals.size()*sizeof(_normals[0])+
+                 _colors.size()*sizeof(_colors[0]),
                  NULL, GL_STATIC_DRAW);
     
     glBufferSubData(GL_ARRAY_BUFFER,
                     0,
-                    vertices.size()*sizeof(vertices[0]),
-                    vertices.data());
+                    _vertices.size()*sizeof(_vertices[0]),
+                    _vertices.data());
     
     glBufferSubData(GL_ARRAY_BUFFER,
-                    vertices.size()*sizeof(vertices[0]) ,
-                    normals.size()*sizeof(normals[0]),
-                    normals.data());
+                    _vertices.size()*sizeof(_vertices[0]) ,
+                    _normals.size()*sizeof(_normals[0]),
+                    _normals.data());
     
     glBufferSubData(GL_ARRAY_BUFFER,
-                    vertices.size()*sizeof(vertices[0]) +normals.size()*sizeof(normals[0]),
-                    colors.size()*sizeof(colors[0]),
-                    colors.data());
+                    _vertices.size()*sizeof(_vertices[0]) +_normals.size()*sizeof(_normals[0]),
+                    _colors.size()*sizeof(_colors[0]),
+                    _colors.data());
     
     //Tell GPU how to intrepret VBO data
     
     glVertexAttribPointer(glGetAttribLocation(_shdId[threadId], "position"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
     glEnableVertexAttribArray(glGetAttribLocation(_shdId[threadId], "position"));
     
-    glVertexAttribPointer(glGetAttribLocation(_shdId[threadId], "normal"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(vertices.size()*sizeof(vertices[0]) ));
+    glVertexAttribPointer(glGetAttribLocation(_shdId[threadId], "normal"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(_vertices.size()*sizeof(_vertices[0]) ));
     glEnableVertexAttribArray(glGetAttribLocation(_shdId[threadId], "normal"));
     
-    glVertexAttribPointer(glGetAttribLocation(_shdId[threadId], "color"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(vertices.size()*sizeof(vertices[0]) +normals.size()*sizeof(normals[0])));
+    glVertexAttribPointer(glGetAttribLocation(_shdId[threadId], "color"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(_vertices.size()*sizeof(_vertices[0]) +_normals.size()*sizeof(_normals[0])));
     glEnableVertexAttribArray(glGetAttribLocation(_shdId[threadId], "color"));
     
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iboId[threadId]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicies.size()*sizeof(indicies[0]), indicies.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indices.size()*sizeof(_indices[0]), _indices.data(), GL_STATIC_DRAW);
     
     
 	glClearColor(0.2, 0.2, 0.3, 1.0);
@@ -283,6 +277,7 @@ void ExampleVrApp::initData()
     //  |/      |/
     //  v2------v3
     
+    // Specify unique values
     glm::vec3 v[] = {
         glm::vec3(1.0f, 1.0f, 1.0f),
         glm::vec3(-1.0f, 1.0f, 1.0f),
@@ -301,17 +296,20 @@ void ExampleVrApp::initData()
         glm::vec3(0,-1,0),
         glm::vec3(0,0,-1)
     };
+    
+
     glm::vec3 c[] = {
-        glm::vec3(0.5,0.5,0.5),
-        glm::vec3(0.5,0.5,1),
-        glm::vec3(0.5,0.6,0.5),
-		glm::vec3(0.5, 0.75, 1),
-		glm::vec3(1, 0.6, 0.5),
-        glm::vec3(1,0.5,1),
-		glm::vec3(1, 0.6, 0.5),
-		glm::vec3(1, 0.6, 1)
+        glm::vec3(0, 0, 0), // Dark Gray
+        glm::vec3(0, 0,   1), // Blue
+        glm::vec3(0, 1,   0), // Green
+		glm::vec3(0, 1,   1),   // Cyan
+		glm::vec3(1,   0, 0), // Red
+        glm::vec3(1,   0,   1), // Purple
+		glm::vec3(1,   1,   0), // Yellow
+		glm::vec3(1,   1,   1)    // White
     };
     
+    // construct faces from
     glm::vec3 vertices_array[]  = {
         v[0], v[1], v[2], v[3],
         v[0], v[3], v[4], v[5],
@@ -330,22 +328,29 @@ void ExampleVrApp::initData()
         n[5], n[5], n[5], n[5]
     };
     
+#define CORNER 1
+#define FACE 2
+#define WHITE 3
+
+    // Pick a color scheme
+#define COLORSCHEME WHITE
+    
     glm::vec3 colors_array[] = {
-#if 0
+#if COLORSCHEME ==  CORNER
         c[0], c[1], c[2], c[3],
         c[0], c[3], c[4], c[5],
         c[0], c[5], c[6], c[1],
         c[1], c[6], c[7], c[2],
         c[7], c[4], c[3], c[2],
         c[4], c[7], c[6], c[5]
-#elif 1
+#elif COLORSCHEME == FACE
         c[0], c[0], c[0], c[0],
         c[1], c[1], c[1], c[1],
         c[2], c[2], c[2], c[2],
         c[3], c[3], c[3], c[3],
         c[4], c[4], c[4], c[4],
         c[5], c[5], c[5], c[5]
-#else
+#else /* COLORSCHEME == WHITE*/
         c[7], c[7], c[7], c[7],
         c[7], c[7], c[7], c[7],
         c[7], c[7], c[7], c[7],
@@ -356,6 +361,7 @@ void ExampleVrApp::initData()
 #endif
     };
     
+    // Define the triangles with index arrays
     GLuint indices_array[] = {
         0, 1, 2, // front
         2, 3, 0,
@@ -371,44 +377,46 @@ void ExampleVrApp::initData()
         22, 23, 20
     };
 
+    // Transfer the data to vectors
+    _indices.assign(indices_array,  indices_array+  sizeof(indices_array)/  sizeof(indices_array[0]));
+    _vertices.assign(vertices_array, vertices_array+ sizeof(vertices_array)/ sizeof(vertices_array[0]));
+    _normals.assign( normals_array,  normals_array+  sizeof(normals_array)/  sizeof(normals_array[0]));
+    _colors.assign(  colors_array,   colors_array+   sizeof(colors_array)/   sizeof(colors_array[0]));
     
-    indicies.assign(indices_array,  indices_array+  sizeof(indices_array)/  sizeof(indices_array[0]));
-    vertices.assign(vertices_array, vertices_array+ sizeof(vertices_array)/ sizeof(vertices_array[0]));
-    normals.assign( normals_array,  normals_array+  sizeof(normals_array)/  sizeof(normals_array[0]));
-    colors.assign(  colors_array,   colors_array+   sizeof(colors_array)/   sizeof(colors_array[0]));
-    
-    lightPositions.push_back(glm::vec3(0,1,0));
-    lightColors.push_back(glm::vec3(1,1,1));
+    // Add a white light above
+    _lightPositions.push_back(glm::vec3(0,1.5,0));
+    _lightColors.push_back(glm::vec3(1,1,1));
 
-    lightPositions.push_back(glm::vec3(0,-1,0));
-    lightColors.push_back(glm::vec3(1,1,1));
-    lightPositions.push_back(glm::vec3(0,0,0));
-    lightColors.push_back(glm::vec3(0.1,0.1,0.1));
+    // Add a red light below
+    _lightPositions.push_back(glm::vec3(0,-0.7,0));
+    _lightColors.push_back(glm::vec3(0.5,0.0,0.0));
+    
+    // Add a small orange light for rotation
+    _lightPositions.push_back(glm::vec3(0,0,0));
+    _lightColors.push_back(glm::vec3(0.00,0.000,0.00));
 }
 
 
-void ExampleVrApp::drawGraphics(int threadId, MinVR::AbstractCameraRef camera,
-		MinVR::WindowRef window) {
-    glm::mat4 proj;
+void ExampleVrApp::drawGraphics(int threadId,
+                                MinVR::WindowRef window, int viewportIndex) {
     
-    MinVR::CameraOffAxis* offAxisCamera = dynamic_cast<MinVR::CameraOffAxis*>(camera.get());
+    MinVR::CameraOffAxis* offAxisCamera = dynamic_cast<MinVR::CameraOffAxis*>(window->getCamera(viewportIndex).get());
+
+    
+    glm::mat4 proj;
     proj = offAxisCamera->getLastAppliedProjectionMatrix();
     
-    glm::mat4 view;
-    view = glm::mat4(offAxisCamera->getLastAppliedViewMatrix());
-    _mutex.lock();
-
-    _mutex.unlock();
-    
+    glm::mat4 view = glm::mat4(offAxisCamera->getLastAppliedViewMatrix());
 
 
     glUniformMatrix4fv(glGetUniformLocation(_shdId[threadId], "view"), 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(glGetUniformLocation(_shdId[threadId], "model"), 1, GL_FALSE, glm::value_ptr(_model));
     glUniformMatrix4fv(glGetUniformLocation(_shdId[threadId], "proj"), 1, GL_FALSE, glm::value_ptr(proj));
-    glUniform1i(glGetUniformLocation(_shdId[threadId], "lightCount"), lightPositions.size());
+    
+    glUniform1i(glGetUniformLocation(_shdId[threadId], "lightCount"), _lightPositions.size());
 
-    glUniform3fv(glGetUniformLocation(_shdId[threadId], "lightColors"), lightPositions.size(), (float*)&lightColors[0]);
-    glUniform3fv(glGetUniformLocation(_shdId[threadId], "lightPositions"), lightPositions.size(), (float*)&lightPositions[0]);
+    glUniform3fv(glGetUniformLocation(_shdId[threadId], "lightColors"), _lightPositions.size(), (float*)&_lightColors[0]);
+    glUniform3fv(glGetUniformLocation(_shdId[threadId], "lightPositions"), _lightPositions.size(), (float*)&_lightPositions[0]);
     
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -418,5 +426,5 @@ void ExampleVrApp::drawGraphics(int threadId, MinVR::AbstractCameraRef camera,
 
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _iboId[threadId]);
 
-    glDrawElements(GL_TRIANGLES, indicies.size(), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, _indices.size(), GL_UNSIGNED_INT, nullptr);
 }
